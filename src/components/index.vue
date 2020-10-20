@@ -1,10 +1,8 @@
 <template>
   <div>
-    <el-row>
-      <el-button type="info"
-                 plain
-                 @click="logout">信息按钮</el-button>
-    </el-row>
+    <el-button type="info"
+               plain
+               @click="logout">退出</el-button>
   </div>
 </template>
 
