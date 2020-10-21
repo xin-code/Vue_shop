@@ -21,11 +21,10 @@ export default router
 
 // 路由导航守卫
 router.beforeEach((to, from, next) => {
-  // 正常登录，放行
-  next()
-  // 从login登录，放行
+  // 从登陆页面过来 直接放行
   if (to.path === '/login') return next()
-  // 保存token值
+  // 获取token值
   const toToken = window.sessionStorage.getItem('token')
   if (!toToken) return next('/login')
+  next()
 })
