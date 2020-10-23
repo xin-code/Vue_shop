@@ -2,6 +2,8 @@ import Vue from 'vue'
 import VueRouter from 'vue-router'
 import login from '../components/login.vue'
 import index from '../components/index.vue'
+import welcome from '../components/welcome.vue'
+import users from '../components/users/users.vue'
 import axios from 'axios'
 
 Vue.use(VueRouter)
@@ -10,7 +12,14 @@ Vue.prototype.$http = axios
 const routes = [
   { path: '/', redirect: '/login' },
   { path: '/login', component: login },
-  { path: '/index', component: index }
+  {
+    path: '/index',
+    component: index,
+    redirect: '/welcome',
+    children:
+    [{ path: '/welcome', component: welcome },
+      { path: '/users', component: users }]
+  }
 ]
 
 const router = new VueRouter({

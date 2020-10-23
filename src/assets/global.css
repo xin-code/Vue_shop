@@ -6,3 +6,20 @@ body,
   margin: 0;
   padding: 0;
 }
+
+/* 面包屑与card中间的距离 */
+.el-breadcrumb {
+  margin-bottom: 15px;
+  font-style: 12px;
+}
+
+/* 表格距离面包屑导航顶部距离 */
+.el-table {
+  margin-top: 15px;
+  font-size: 12px;
+}
+
+/* 分页与表格中间的距离 */
+.el-pagination {
+  margin-top: 15px;
+}
