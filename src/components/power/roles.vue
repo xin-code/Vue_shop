@@ -30,20 +30,39 @@
           <template slot-scope="scope">
             <el-row v-for="(item1,index1) in scope.row.children"
                     :key="item1.id"
-                    :class="['expandRowBottomBorder',index1===0?'expandRowTopBorder':'']">
+                    :class="['expandRowBottomBorder',index1===0 ? 'expandRowTopBorder':'']">
               <!-- 一级权限 -->
-              <el-col :span="8">
-                <el-tag>{{item1.authName}}</el-tag>
+              <el-col :span="5">
+                <el-tag closable
+                        @close="removeTagById(scope.row,item1.id)">{{item1.authName}}</el-tag>
+                <i class="el-icon-caret-right"></i>
+              </el-col>
+
+              <el-col :span="19">
+                <!-- 二级权限 -->
+                <el-row v-for="(item2,index2) in item1.children"
+                        :key="item2.id"
+                        :class="[index2===0 ? '' :'expandRowTopBorder']">
+                  <!-- 左侧 -->
+                  <el-col :span="6">
+                    <el-tag closable
+                            type="success"
+                            @close="removeTagById(scope.row,item2.id)">{{item2.authName}}</el-tag>
+                    <i class="el-icon-caret-right"></i>
+                  </el-col>
+
+                  <!-- 右侧 三级权限 -->
+                  <el-col :span="18">
+                    <el-tag closable
+                            v-for="item3 in item2.children"
+                            :key="item3.id"
+                            type="warning"
+                            @close="removeTagById(scope.row,item3.id)">{{item3.authName}}</el-tag>
+                  </el-col>
+                </el-row>
               </el-col>
             </el-row>
-            <!-- 二级权限 -->
-            <!-- <el-row v-for="item2 in item1.children"
-                    :key="item2.id">
-              <el-col :span="19">
-                <el-tag type="success">{{item2.authName}}</el-tag>
-              </el-col>
-            </el-row> -->
-            <pre>{{scope.row}}</pre>
+            <!-- {{scope.row}} -->
           </template>
         </el-table-column>
 
@@ -75,7 +94,8 @@
                          @click="deletRolesInfo(scope.row.id)">删除</el-button>
               <el-button type="warning"
                          icon="el-icon-setting"
-                         size="small">分配权限</el-button>
+                         size="small"
+                         @click="setRightInfo(scope.row)">分配权限</el-button>
             </el-row>
           </template>
         </el-table-column>
@@ -148,6 +168,28 @@
                    @click="submitEditRolesDialog">确 定</el-button>
       </span>
     </el-dialog>
+
+    <!-- 分配权限dialog -->
+    <el-dialog title="分配权限"
+               :visible.sync="setRightdialogVisible"
+               width="50%"
+               @close="resetSetRightDialog">
+      <!-- 树形控件 -->
+      <el-tree :data="treeRightList"
+               show-checkbox
+               node-key="id"
+               :props="defaultProps"
+               :default-expand-all="true"
+               :default-checked-keys="treeCheckedKeys"
+               ref="treeRef">
+      </el-tree>
+      <span slot="footer"
+            class="dialog-footer">
+        <el-button @click="setRightdialogVisible = false">取 消</el-button>
+        <el-button type="primary"
+                   @click="submitSetRight">确 定</el-button>
+      </span>
+    </el-dialog>
   </div>
 </template>
 
@@ -181,7 +223,19 @@ export default {
       editRolesRules: {
         roleName: [{ required: true, message: '请输入角色名称！' }],
         roleDesc: [{ required: true, message: '请输入角色描述！' }]
-      }
+      },
+      // 分配权限dialog
+      setRightdialogVisible: false,
+      treeRightList: [],
+      // 树形控件
+      defaultProps: {
+        children: 'children',
+        label: 'authName'
+      },
+      // 树形控件 默认勾选的数组
+      treeCheckedKeys: [],
+      // 保存过来的ID号
+      submitSetRightId: ''
     }
   },
   created () {
@@ -269,6 +323,79 @@ export default {
       } else {
         this.$message.info('用户取消了删除操作！')
       }
+    },
+    // 删除Tag标签
+    async removeTagById (role, rightId) {
+      console.log(role.id, rightId)
+      const confirmResult = await this.$confirm('此操作将永久删除该文件, 是否继续?', '提示', {
+        confirmButtonText: '确定',
+        cancelButtonText: '取消',
+        type: 'warning'
+      }).catch(err => err)
+
+      console.log(confirmResult)
+
+      if (confirmResult !== 'confirm') {
+        return this.$message.info('用户取消了删除操作！')
+      }
+      this.$message.success('确认删除！')
+      const { data: res } = await this.$http.delete(`roles/${role.id}/rights/${rightId}`)
+      if (res.meta.status !== 200) return this.$message.error(res.meta.msg)
+      this.$message.success(res.meta.msg)
+      // 会发生页面的完整渲染
+      // this.getRolesList()
+
+      // 当前返回的data为最新的权限
+      role.children = res.data
+    },
+    // 分配权限按钮
+    async setRightInfo (row) {
+      const { data: res } = await this.$http.get('rights/tree')
+      console.log(res)
+      if (res.meta.status !== 200) return this.$message.error(res.meta.msg)
+      this.$message.success(res.meta.msg)
+      this.treeRightList = res.data
+      console.log(this.treeRightList)
+
+      // 递归获取三级节点的id值
+      this.getAllInfo(row, this.treeCheckedKeys)
+
+      // 保存id到data中
+      this.submitSetRightId = row.id
+      console.log(this.submitSetRightId)
+
+      // 显示分配权限的dialog
+      this.setRightdialogVisible = true
+    },
+    // 通过递归函数 传递到函数中
+    getAllInfo (node, arr) {
+      if (!node.children) {
+        return arr.push(node.id)
+      }
+      node.children.forEach(item => this.getAllInfo(item, arr))
+    },
+    // 分配权限
+    resetSetRightDialog () {
+      this.treeCheckedKeys = []
+    },
+    // 提交权限按钮
+    async submitSetRight () {
+      const allowKeys = [...this.$refs.treeRef.getCheckedKeys(), ...this.$refs.treeRef.getHalfCheckedKeys()]
+      console.log(allowKeys)
+
+      const idStr = allowKeys.join(',')
+
+      const id = this.submitSetRightId
+
+      const { data: res } = await this.$http.post(`roles/${id}/rights`, { rids: idStr })
+      console.log(res)
+
+      if (res.meta.status !== 200) return this.$message.error(res.meta.msg)
+      this.$message.success(res.meta.msg)
+
+      this.getRolesList()
+
+      this.setRightdialogVisible = false
     }
   }
 }
@@ -276,12 +403,19 @@ export default {
 
 <style lang="less" scoped>
 .el-tag {
-  margin: 10px 0;
+  margin: 10px;
+}
+.el-row {
+  display: flex;
+  align-items: center;
 }
 .expandRowTopBorder {
   border-top: 1px solid #eee;
 }
 .expandRowBottomBorder {
   border-bottom: 1px solid #eee;
+}
+i {
+  margin-left: 10px;
 }
 </style>
