@@ -5,7 +5,8 @@
       <div>
         <img src="../assets/logo.png"
              class="logo">
-        <span>后台商品管理系统</span>
+        <!-- 后台商品管理系统 -->
+        <span>环保岛</span>
       </div>
       <el-button type="info"
                  plain
