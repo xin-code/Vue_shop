@@ -41,11 +41,10 @@
         <el-tabs tab-position="left"
                  v-model="nowActiveStepIndex"
                  :before-leave="tabsChange"
-                 @tab-click="tabClcked">
+                 @tab-click="clickFunction">
           <!-- 基本信息 -->
           <el-tab-pane label="基本信息"
                        name="0">
-
             <!-- 商品名称 -->
             <el-form-item label="商品名称"
                           prop="goods_name">
@@ -80,12 +79,35 @@
             </el-form-item>
 
           </el-tab-pane>
+
+          <!-- 商品参数 -->
           <el-tab-pane label="商品参数"
-                       name="1">商品参数</el-tab-pane>
+                       name="1">
+            <el-form-item :label="item.attr_name"
+                          v-for="item in manyTableData"
+                          :key="item.attr_id">
+              <el-checkbox v-model="item.attr_vals"
+                           :label="items"
+                           v-for="(items,index) in item.attr_vals"
+                           :key="index"
+                           border></el-checkbox>
+            </el-form-item>
+          </el-tab-pane>
+
+          <!-- 商品属性 -->
+          <el-tab-pane label="商品属性"
+                       name="2">
+            <!-- 商品名称 -->
+            <el-form-item :label="item.attr_name"
+                          v-for="item in onlyTableData"
+                          :key="item.attr_id">
+              <el-input v-model="item.attr_vals"></el-input>
+            </el-form-item>
+          </el-tab-pane>
           <el-tab-pane label="商品图片"
-                       name="2">商品图片</el-tab-pane>
-          <el-tab-pane label="商品图片"
-                       name="3">商品图片</el-tab-pane>
+                       name="3">商品图片
+            <el-button type="primary">图片上传</el-button>
+          </el-tab-pane>
           <el-tab-pane label="商品内容"
                        name="4">商品内容</el-tab-pane>
         </el-tabs>
@@ -120,8 +142,11 @@ export default {
       // 获取所有商品的分类options对应的数据源
       cateList: [],
       // 获取级联选择器的时候的options
-      cateAllInfooptions: { expandTrigger: 'hover', value: 'cat_id', label: 'cat_name', children: 'children' }
-
+      cateAllInfooptions: { expandTrigger: 'hover', value: 'cat_id', label: 'cat_name', children: 'children' },
+      // 保存商品参数的数组
+      manyTableData: [],
+      // 保存商品属性的数组
+      onlyTableData: []
     }
   },
   created () {
@@ -151,10 +176,45 @@ export default {
         this.$message.error('请先选择商品分类！')
         return false
       }
+    },
+    // 点击商品参数的时候 进行调用请求
+    async clickFunction () {
+      console.log(this.nowActiveStepIndex)
+      if (this.nowActiveStepIndex === '1') {
+        const { data: res } = await this.$http.get(`categories/${this.cateId}/attributes`, { params: { sel: 'many' } })
+        console.log(res)
+        if (res.meta.status !== 200) return this.$message.error(res.meta.msg)
+        this.$message.success(res.meta.msg)
+        this.manyTableData = res.data
+        this.manyTableData.forEach(item => {
+          item.attr_vals = item.attr_vals.lenth === 0 ? [] : item.attr_vals.split(' ')
+        })
+        console.log(this.manyTableData)
+      }
+
+      if (this.nowActiveStepIndex === '2') {
+        const { data: res } = await this.$http.get(`categories/${this.cateId}/attributes`, { params: { sel: 'only' } })
+        console.log(res)
+        if (res.meta.status !== 200) return this.$message.error(res.meta.msg)
+        this.$message.success(res.meta.msg)
+        this.onlyTableData = res.data
+        console.log(this.onlyTableData)
+      }
+    }
+  },
+  computed: {
+    cateId () {
+      if (this.addGoodsForm.goods_cat.length === 3) {
+        return this.addGoodsForm.goods_cat[2]
+      }
+      return null
     }
   }
 }
 </script>
 
 <style lang="less" scoped>
+.el-checkbox {
+  margin: 5px !important;
+}
 </style>
