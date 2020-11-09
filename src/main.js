@@ -7,6 +7,14 @@ import './assets/fonts/iconfont.css'
 import axios from 'axios'
 import treeTable from 'vue-table-with-tree-grid'
 
+// 导入富文本文件
+import VueQuillEditor from 'vue-quill-editor'
+
+// 导入富文本编辑器的样式表
+import 'quill/dist/quill.core.css' // import styles
+import 'quill/dist/quill.snow.css' // for snow theme
+import 'quill/dist/quill.bubble.css' // for bubble theme
+
 axios.defaults.baseURL = 'http://127.0.0.1:8888/api/private/v1/'
 
 // 在挂载之前进行预处理操作
@@ -16,6 +24,8 @@ axios.interceptors.request.use(config => {
   // 必须return
   return config
 })
+
+Vue.use(VueQuillEditor)
 
 Vue.prototype.$http = axios
 

@@ -105,18 +105,54 @@
             </el-form-item>
           </el-tab-pane>
           <el-tab-pane label="商品图片"
-                       name="3">商品图片
-            <el-button type="primary">图片上传</el-button>
+                       name="3">
+            <!-- 图片上传 -->
+            <el-upload :action="uploadURL"
+                       :on-preview="previewImgDialog"
+                       :on-remove="uploadImgRemove"
+                       list-type="picture"
+                       :headers="headerObj"
+                       :on-success="imgSuccessUpload">
+              <el-button size="small"
+                         type="primary">点击上传</el-button>
+              <div slot="tip"
+                   class="el-upload__tip">只能上传图片文件，且不超过500kb</div>
+            </el-upload>
           </el-tab-pane>
+          <!-- 商品内容 -->
           <el-tab-pane label="商品内容"
-                       name="4">商品内容</el-tab-pane>
+                       name="4">
+            <!-- 富文本编辑器 -->
+            <quill-editor :v-model="addGoodsForm.goods_introduce"></quill-editor>
+            <!-- 添加商品的按钮 -->
+            <el-button type="primary"
+                       class="addGoods"
+                       @click="addGoodsBtn">添加商品</el-button>
+          </el-tab-pane>
         </el-tabs>
       </el-form>
     </el-card>
+
+    <el-dialog title="图片预览"
+               :visible.sync="previewImgDialogVisiable"
+               width="50%">
+      <img :src="tempImgPreviewURL"
+           style="width:100%;">
+      <span slot="footer"
+            class="dialog-footer">
+        <el-button @click="previewImgDialogVisiable = false">取 消</el-button>
+        <el-button type="primary"
+                   @click="previewImgDialogVisiable = false">确 定</el-button>
+      </span>
+    </el-dialog>
+
   </div>
 </template>
 
 <script>
+// 导入lodash
+import _ from 'lodash'
+
 export default {
   data () {
     return {
@@ -129,7 +165,10 @@ export default {
         goods_weight: 0,
         goods_number: 0,
         // 选中的商品数组
-        goods_cat: []
+        goods_cat: [],
+        pics: [],
+        // 商品的详情页
+        goods_introduce: ''
       },
       // 添加商品的验证规则
       addGoodsRules: {
@@ -146,7 +185,17 @@ export default {
       // 保存商品参数的数组
       manyTableData: [],
       // 保存商品属性的数组
-      onlyTableData: []
+      onlyTableData: [],
+      // upload上传地址
+      uploadURL: 'http://127.0.0.1:8888/api/private/v1/upload',
+      // 显示预览的Dialog框
+      previewImgDialogVisiable: false,
+      // upload组件的请求头
+      headerObj: {
+        Authorization: window.sessionStorage.getItem('token')
+      },
+      // 预览图片用的上的地址信息
+      tempImgPreviewURL: ''
     }
   },
   created () {
@@ -200,6 +249,54 @@ export default {
         this.onlyTableData = res.data
         console.log(this.onlyTableData)
       }
+    },
+    // 处理图片预览
+    previewImgDialog (file) {
+      this.previewImgDialogVisiable = true
+      console.log(file)
+      // 获取临时路径
+      this.tempImgPreviewURL = file.response.data.url
+      console.log(this.tempImgPreviewURL)
+    },
+    // 单击删除事件
+    uploadImgRemove (file) {
+      console.log('delete')
+      console.log(file)
+      // 1.获取将要删除的临时路径
+      console.log(file.response.data.tmp_path)
+
+      const filePath = file.response.data.tmp_path
+      // 2.从数组中找到一样的
+      const currentImg = this.addGoodsForm.pics.findIndex(x => x.pic === filePath)
+      console.log(currentImg)
+      // 3.从数组中移除
+      this.addGoodsForm.pics.splice(currentImg, 1)
+      console.log(this.addGoodsForm.pics)
+    },
+    // 图片成功上传的路径
+    imgSuccessUpload (response) {
+      console.log(response)
+      if (response.meta.status !== 200) return this.$message.error(response.meta.msg)
+      this.$message.success(response.meta.msg)
+      // 拼接字符串成为一个数组
+      const pathInfo = { pic: response.data.tmp_path }
+      this.addGoodsForm.pics.push(pathInfo)
+      console.log(this.addGoodsForm.pics)
+    },
+    // 提交编辑的商品信息
+    addGoodsBtn () {
+      this.$refs.addGoodsRef.validate(async valid => {
+        console.log(valid)
+        if (!valid) return this.$message.error('预校验失败，请重新输入！')
+        const form = _.cloneDeep(this.addGoodsForm)
+        form.goods_cat = form.goods_cat.join(',')
+        console.log(form)
+        const { data: res } = await this.$http.post('goods', form)
+        console.log(res)
+        if (res.meta.status !== 201) return this.$message.error(res.meta.msg)
+        this.$message.success(res.meta.msg)
+        this.$router.push('/goods')
+      })
     }
   },
   computed: {
@@ -216,5 +313,10 @@ export default {
 <style lang="less" scoped>
 .el-checkbox {
   margin: 5px !important;
+}
+.addGoods {
+  display: flex;
+  margin-left: auto;
+  margin-top: 25px;
 }
 </style>
